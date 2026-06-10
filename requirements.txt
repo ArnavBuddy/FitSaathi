@@ -19,3 +19,5 @@ python-dotenv==1.0.1
 # transformers>=4.30.0
 # diffusers>=0.20.0
 # accelerate>=0.20.0
+# Colab API integration
+aiohttp>=3.8.0

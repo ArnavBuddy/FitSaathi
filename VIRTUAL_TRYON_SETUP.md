@@ -1,107 +1,61 @@
 # Virtual Try-On Setup Guide
-
-This guide explains how to set up and use the CatVTON-powered virtual try-on feature in FitSaathi.
+This guide explains how to set up and use the virtual try-on feature in FitSaathi.
 
 ## Current Status
+The virtual try-on feature supports:
+- ✅ **Placeholder** (simple composite image)
+- ✅ **Google Colab** (free GPU acceleration)
+- ✅ **Local CatVTON** (coming soon)
 
-The virtual try-on feature is fully integrated with:
-- ✅ Abstract provider interface (easy to swap models)
-- ✅ CatVTON wrapper (placeholder implementation)
-- ✅ Background task processing
-- ✅ Job status polling
-- ✅ React + Tailwind component
-- ✅ Upload directories auto-creation
+---
 
-## Quick Start
+## Option 1: Quick Start with Placeholder
+Just run the server! No extra setup needed.
 
-1. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+uvicorn backend.main:app --reload
+```
 
-2. **Start the server**
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+---
 
-3. **Test the endpoint**
-   The API is available at `http://localhost:8080`
-   - `POST /api/v1/tryon/generate` - Initiate try-on
-   - `GET /api/v1/tryon/result/{job_id}` - Get results
+## Option 2: Colab GPU Acceleration (Free! 🚀
+This is the easiest way to get high-quality try-ons with free GPU power!
 
-## Current Implementation
+### Step 1: Open Colab Notebook
+1. Go to [Google Colab](https://colab.research.google.com)
+2. Create a new notebook
+3. Copy the contents of `colab_tryon_server.py` into the notebook
+4. Set runtime type to **GPU** (Runtime → Change runtime type → Hardware accelerator: GPU)
 
-Right now, the virtual try-on uses a simple placeholder composite:
-- It takes your photo
-- Takes the clothing item
-- Pastes the clothing in the center
+### Step 2: Run the Server
+1. Run all cells in the Colab notebook
+2. Wait for ngrok to give you a public URL like: `https://abc123xyz.ngrok-free.app`
 
-## Integrating Real CatVTON
+### Step 3: Configure FitSaathi
+1. Update your `.env` file:
+```env
+USE_COLAB=true
+COLAB_API_URL=https://your-ngrok-url.ngrok-free.app/tryon
+```
+3. Restart your FitSaathi server
 
-To replace the placeholder with real CatVTON:
+### Step 4: Try It Out!
+The try-ons will now use Colab's GPU!
 
-### Option 1: Use Hugging Face Implementation
+---
 
-1. **Uncomment dependencies in requirements.txt**
-   ```txt
-   torch>=2.0.0
-   torchvision>=0.15.0
-   transformers>=4.30.0
-   diffusers>=0.20.0
-   accelerate>=0.20.0
-   ```
+## Option 3: Local CatVTON (Coming Soon)
+To use local CatVTON, uncomment the dependencies in requirements.txt and follow below.
 
-2. **Install dependencies**
-   ```bash
-   pip install torch torchvision transformers diffusers accelerate
-   ```
+### Install Dependencies
+```bash
+pip install torch torchvision transformers diffusers accelerate
+```
 
-3. **Update `backend/services/virtual_tryon.py`**
+### Update virtual_tryon.py
+See comments in `backend/services/virtual_tryon.py` to uncomment real CatVTON code.
 
-   In the `CatVTONService` class:
-
-   ```python
-   from diffusers import CatVTONPipeline
-   import torch
-
-   def load_model(self):
-       logger.info(f"Loading CatVTON model on {self.device}")
-       self.model = CatVTONPipeline.from_pretrained(
-           "zhengchong/CatVTON",
-           torch_dtype=torch.float16 if self.device == "cuda" else torch.float32
-       )
-       if self.device == "cuda":
-           self.model = self.model.to("cuda")
-       self.is_model_loaded = True
-       logger.info("CatVTON model loaded!")
-
-   def generate_tryon(self, person_image_path, garment_image_path):
-       from PIL import Image
-
-       person_img = Image.open(person_image_path).convert("RGB")
-       garment_img = Image.open(garment_image_path).convert("RGB")
-
-       result = self.model(
-           person_image=person_img,
-           garment_image=garment_img
-       )
-
-       output_path = os.path.join(
-           settings.TRYON_OUTPUT_DIR,
-           f"tryon_{uuid.uuid4().hex}.jpg"
-       )
-       result.save(output_path)
-       return output_path
-   ```
-
-### Option 2: Use Colab for GPU Acceleration
-
-If you don't have a local GPU, you can:
-
-1. **Set up a Colab notebook**
-2. **Run CatVTON there**
-3. **Create an API endpoint**
-4. **Update `download_garment_image` function** to call your Colab API
+---
 
 ## API Endpoints
 
@@ -115,112 +69,44 @@ item_id: "SKU-001"
 file: [your_photo.jpg]
 ```
 
-Response:
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "processing"
-}
-```
-
 ### 2. Get Result
 ```http
 GET /api/v1/tryon/result/{job_id}
 ```
 
-Response (pending):
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "processing",
-  "generated_image": null,
-  "error_message": null,
-  "processing_time_seconds": null
-}
-```
+---
 
-Response (success):
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "completed",
-  "generated_image": "/uploads/tryons/tryon_abc123.jpg",
-  "error_message": null,
-  "processing_time_seconds": 2.45
-}
-```
+## Environment Variables
+| Variable | Description | Default |
+|----------|-------------|---------|
+| USE_COLAB | Use Colab for GPU acceleration | false |
+| COLAB_API_URL | Public URL from Colab | - |
+| COLAB_API_KEY | Optional API key | - |
+| TRYON_OUTPUT_DIR | Where to save try-ons | uploads/tryons |
+| USE_CUDA | Use local GPU | false |
 
-## React Component Usage
+---
 
-```tsx
-import VirtualTryOn from './components/VirtualTryOn';
-
-function ProductPage() {
-  const [showTryOn, setShowTryOn] = useState(false);
-  const userId = "demo_user_123";
-
-  const item = {
-    item_id: "SKU-001",
-    name: "Classic White Shirt",
-    image_url: "/path/to/shirt.jpg",
-    price_inr: 1999,
-    brand: "FitSaathi"
-  };
-
-  return (
-    <>
-      <button onClick={() => setShowTryOn(true)}>
-        Virtual Try-On
-      </button>
-
-      {showTryOn && (
-        <VirtualTryOn
-          item={item}
-          userId={userId}
-          onClose={() => setShowTryOn(false)}
-        />
-      )}
-    </>
-  );
-}
-```
-
-## Architecture Overview
-
+## Architecture
 ```
 FitSaathi/
 ├── backend/
 │   ├── services/
 │   │   └── virtual_tryon.py  # Core try-on logic
 │   ├── schemas.py            # Pydantic models
-│   ├── config.py            # Settings
-│   └── main.py              # FastAPI endpoints
+│   ├── config.py           # Settings
+│   └── main.py             # API endpoints
 ├── frontend/
 │   └── components/
-│       └── VirtualTryOn.tsx # React UI
-└── uploads/
-    ├── users/              # User photos
-    ├── garments/           # Downloaded clothing
-    └── tryons/             # Generated results
+│       └── VirtualTryOn.tsx  # React UI
+├── uploads/
+│   ├── users/              # User photos
+│   ├── garments/         # Downloaded clothing
+│   └── tryons/         # Generated results
+└── colab_tryon_server.py  # Colab GPU server
 ```
 
+---
+
 ## Future Enhancements
-
-1. **IDM-VTON Integration**: Swap CatVTON with IDM-VTON for better quality
-2. **Redis for Job Store**: Replace in-memory store for persistence
-3. **Queue System**: Use Celery/RQ for better task management
-4. **WebSockets**: Real-time updates instead of polling
-5. **Batch Processing**: Handle multiple try-ons at once
-
-## Troubleshooting
-
-### Common Issues
-
-**Q: The model is not loading**
-A: Check if you uncommented the dependencies in requirements.txt
-
-**Q: CUDA out of memory**
-A: Reduce batch size or use CPU by setting `USE_CUDA=false`
-
-**Q: Generated images are not saving**
-A: Make sure `uploads/tryons` directory exists and is writable
+- Swap CatVTON with IDM-VTON for higher quality!
