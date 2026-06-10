@@ -1,0 +1,24 @@
+{
+  "agent_name": "FitSaathi",
+  "description": "AI Personal Stylist",
+  "model": "gemini-2.0-flash",
+  "system_instruction": "agent_config/system_prompt.txt",
+  "tools": [
+    {
+      "name": "analyze_body_scan",
+      "endpoint": "/api/scan"
+    },
+    {
+      "name": "search_inventory",
+      "endpoint": "/api/recommend"
+    },
+    {
+      "name": "get_user_profile",
+      "endpoint": "/api/user/{user_id}"
+    },
+    {
+      "name": "submit_feedback",
+      "endpoint": "/api/feedback"
+    }
+  ]
+}

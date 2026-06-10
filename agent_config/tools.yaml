@@ -1,0 +1,61 @@
+openapi: 3.0.0
+info:
+  title: FitSaathi Stylist Tools
+  version: 1.0.0
+paths:
+  /api/scan:
+    post:
+      operationId: analyze_body_scan
+      summary: Analyze a body scan photo
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                user_id:
+                  type: string
+  /api/recommend:
+    post:
+      operationId: search_inventory
+      summary: Search and rank clothing recommendations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                filters:
+                  type: object
+                  properties:
+                    gender: {type: string}
+                    budget_max: {type: integer}
+                    style_tags: {type: array, items: {type: string}}
+  /api/user/{user_id}:
+    get:
+      operationId: get_user_profile
+      summary: Get user profile and body data
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+  /api/feedback:
+    post:
+      operationId: submit_feedback
+      summary: Submit user feedback on an item
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: {type: string}
+                item_id: {type: string}
+                action: {type: string, enum: [like, dislike, purchase]}
