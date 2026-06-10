@@ -10,6 +10,16 @@
   const API_BASE = "/api";
   let currentScanResult = null;
   let sessionId = Math.random().toString(36).substr(2, 9);
+  let currentTryOnItem = null;
+  let isDragging = false;
+  let isResizing = false;
+  let startX = 0;
+  let startY = 0;
+  let currentX = 0;
+  let currentY = 0;
+  let currentScale = 1;
+  let startScale = 1;
+  let itemsData = [];
 
   document.addEventListener("DOMContentLoaded", () => {
     console.log("FitSaathi: DOM Loaded");
@@ -33,6 +43,17 @@
       budgetFilter: document.getElementById("budgetFilter"),
       budgetValue: document.getElementById("budgetValue"),
       occasionFilter: document.getElementById("occasionFilter"),
+      tryOnModal: document.getElementById("tryOnModal"),
+      closeTryOn: document.getElementById("closeTryOn"),
+      tryOnItemName: document.getElementById("tryOnItemName"),
+      tryOnPhotoInput: document.getElementById("tryOnPhotoInput"),
+      tryOnUserPhoto: document.getElementById("tryOnUserPhoto"),
+      tryOnProductPhoto: document.getElementById("tryOnProductPhoto"),
+      tryOnProductWrapper: document.getElementById("tryOnProductWrapper"),
+      resizeHandle: document.getElementById("resizeHandle"),
+      tryOnPlaceholder: document.getElementById("tryOnPlaceholder"),
+      tryOnSizeSlider: document.getElementById("tryOnSizeSlider"),
+      tryOnContainer: document.getElementById("tryOnContainer"),
     };
 
     // Basic check for essential elements
@@ -122,7 +143,7 @@
       summary.id = "scan-summary";
       summary.innerHTML = `
                 <div style="margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px;">
-                    <h3 style="color: var(--gold)">Analysis Complete</h3>
+                    <h3 style="color: var(--gold);">Analysis Complete</h3>
                     <p>Body Type: <strong>${(result.body_type || "unknown").toUpperCase()}</strong> | Confidence: ${((result.confidence_score || 0) * 100).toFixed(0)}%</p>
                     <p style="font-size: 14px; opacity: 0.8">${result.analysis_notes || ""}</p>
                 </div>
@@ -176,9 +197,9 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const items = await response.json();
-        console.log("FitSaathi: Items received:", items);
-        displayRecommendations(items);
+        itemsData = await response.json();
+        console.log("FitSaathi: Items received:", itemsData);
+        displayRecommendations(itemsData);
       } catch (err) {
         console.error("FitSaathi Recommendations Error:", err);
         elements.recommendationsGrid.innerHTML = `<p style="text-align: center; padding: 40px; color: #E8705A;">Error loading recommendations: ${err.message}</p>`;
@@ -215,7 +236,7 @@
                         <div class="card-actions">
                             <button class="btn btn-small like-btn" data-id="${item.item_id}">♡</button>
                             <button class="btn btn-small dislike-btn" data-id="${item.item_id}">✕</button>
-                            <button class="btn btn-small" style="flex: 1">Try It</button>
+                            <button class="btn btn-small try-it-btn" data-index="${index}" style="flex: 1;">Try It</button>
                         </div>
                     </div>
                 `;
@@ -237,6 +258,16 @@
             handleFeedback(btn.dataset.id, "dislike"),
           );
         });
+      // Add Try It listeners - using index instead of data-item
+      elements.recommendationsGrid
+        .querySelectorAll(".try-it-btn")
+        .forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const index = parseInt(btn.dataset.index);
+            const item = itemsData[index];
+            openTryOnModal(item);
+          });
+        });
     }
 
     async function handleFeedback(itemId, action) {
@@ -249,6 +280,222 @@
       } catch (err) {
         console.error("Feedback error:", err);
       }
+    }
+
+    // Virtual Try-On Functions
+    function openTryOnModal(item) {
+      currentTryOnItem = item;
+      elements.tryOnItemName.textContent = item.name;
+      elements.tryOnProductPhoto.src = item.image_url;
+      elements.tryOnProductWrapper.style.display = "block";
+      elements.tryOnUserPhoto.style.display = "none";
+      elements.tryOnPlaceholder.style.display = "block";
+      elements.tryOnPhotoInput.value = "";
+      elements.tryOnSizeSlider.value = 1;
+      currentScale = 1;
+      resetProductPosition();
+      elements.tryOnModal.style.display = "flex";
+    }
+
+    function resetProductPosition() {
+      currentX = 0;
+      currentY = 0;
+      currentScale = 1;
+      elements.tryOnProductWrapper.style.transform =
+        "translate(-50%, 0) scale(1)";
+      elements.tryOnProductWrapper.style.top = "15%";
+      elements.tryOnProductWrapper.style.left = "50%";
+      elements.tryOnProductWrapper.style.width = "60%";
+    }
+
+    function closeTryOnModal() {
+      elements.tryOnModal.style.display = "none";
+      currentTryOnItem = null;
+    }
+
+    async function handleTryOnPhotoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        elements.tryOnUserPhoto.src = e.target.result;
+        elements.tryOnUserPhoto.style.display = "block";
+        elements.tryOnPlaceholder.style.display = "none";
+
+        // Analyze the photo for automatic placement
+        await analyzeAndPlaceClothing(file);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeAndPlaceClothing(file) {
+      try {
+        console.log("Analyzing photo for clothing placement...");
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${API_BASE}/analyze-placement`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const analysis = await response.json();
+        console.log("Placement analysis:", analysis);
+
+        // Apply the placement
+        if (analysis.placement) {
+          const p = analysis.placement;
+          elements.tryOnProductWrapper.style.top = `${p.top_percent}%`;
+          elements.tryOnProductWrapper.style.left = `${p.left_percent}%`;
+          elements.tryOnProductWrapper.style.width = `${p.width_percent}%`;
+          elements.tryOnProductWrapper.style.transform = `translate(-50%, 0) rotate(${p.rotation_degrees}deg) scale(1)`;
+          elements.tryOnSizeSlider.value = p.width_percent / 60; // Normalize to 0.5-1.5 range
+          currentScale = p.width_percent / 60;
+          currentX = 0;
+          currentY = 0;
+        }
+
+        alert(
+          "Clothing placed automatically! You can drag or resize to adjust.",
+        );
+      } catch (err) {
+        console.error("Error analyzing placement:", err);
+        alert(
+          "Could not automatically place clothing. You can adjust manually.",
+        );
+      }
+    }
+
+    function handleTryOnSizeChange(e) {
+      currentScale = parseFloat(e.target.value);
+      updateProductTransform();
+    }
+
+    function updateProductTransform() {
+      elements.tryOnProductWrapper.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px) scale(${currentScale})`;
+    }
+
+    // Drag functionality - now uses the wrapper
+    function startDrag(e) {
+      if (e.target === elements.resizeHandle) return;
+      isDragging = true;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      startX = clientX - currentX;
+      startY = clientY - currentY;
+    }
+
+    function doDrag(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      currentX = clientX - startX;
+      currentY = clientY - startY;
+
+      updateProductTransform();
+    }
+
+    function endDrag() {
+      isDragging = false;
+    }
+
+    // Resize functionality
+    function startResize(e) {
+      e.stopPropagation();
+      isResizing = true;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      startX = clientX;
+      startY = clientY;
+      startScale = currentScale;
+    }
+
+    function doResize(e) {
+      if (!isResizing) return;
+      e.preventDefault();
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      const delta = Math.max(deltaX, deltaY);
+
+      // Calculate scale change
+      const scaleChange = delta / 100; // Adjust sensitivity
+      currentScale = Math.max(0.3, Math.min(2.5, startScale + scaleChange));
+
+      elements.tryOnSizeSlider.value = currentScale;
+      updateProductTransform();
+    }
+
+    function endResize() {
+      isResizing = false;
+    }
+
+    // Bind Try-On Events
+    if (elements.closeTryOn) {
+      elements.closeTryOn.addEventListener("click", closeTryOnModal);
+    }
+    if (elements.tryOnModal) {
+      elements.tryOnModal.addEventListener("click", (e) => {
+        if (e.target === elements.tryOnModal) {
+          closeTryOnModal();
+        }
+      });
+    }
+    if (elements.tryOnPhotoInput) {
+      elements.tryOnPhotoInput.addEventListener(
+        "change",
+        handleTryOnPhotoUpload,
+      );
+    }
+    if (elements.tryOnSizeSlider) {
+      elements.tryOnSizeSlider.addEventListener("input", handleTryOnSizeChange);
+    }
+
+    // Bind drag events to wrapper
+    if (elements.tryOnProductWrapper) {
+      elements.tryOnProductWrapper.addEventListener("mousedown", startDrag);
+      document.addEventListener("mousemove", function (e) {
+        doDrag(e);
+        doResize(e);
+      });
+      document.addEventListener("mouseup", function () {
+        endDrag();
+        endResize();
+      });
+
+      // Touch events for mobile
+      elements.tryOnProductWrapper.addEventListener("touchstart", startDrag, {
+        passive: false,
+      });
+      document.addEventListener(
+        "touchmove",
+        function (e) {
+          doDrag(e);
+          doResize(e);
+        },
+        { passive: false },
+      );
+      document.addEventListener("touchend", function () {
+        endDrag();
+        endResize();
+      });
+    }
+
+    // Bind resize events
+    if (elements.resizeHandle) {
+      elements.resizeHandle.addEventListener("mousedown", startResize);
+      elements.resizeHandle.addEventListener("touchstart", startResize, {
+        passive: false,
+      });
     }
 
     // Chat Logic

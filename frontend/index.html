@@ -156,7 +156,33 @@
       </svg>
     </div>
 
-    <div class="chat-panel" id="chatPanel">
+    <!-- Virtual Try-On Modal -->
+      <div class="modal" id="tryOnModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Virtual Try-On</h3>
+            <button id="closeTryOn" style="background:none;border:none;color:var(--cream);cursor:pointer;font-size:20px;">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="margin-bottom:10px;">Upload your photo to try on <span id="tryOnItemName"></span></p>
+            <input type="file" id="tryOnPhotoInput" accept="image/*" style="margin-bottom:10px;">
+            <div class="try-on-container" id="tryOnContainer">
+              <img id="tryOnUserPhoto">
+              <div class="try-on-product-wrapper" id="tryOnProductWrapper">
+                <img id="tryOnProductPhoto">
+                <div class="resize-handle" id="resizeHandle"></div>
+              </div>
+              <p id="tryOnPlaceholder">Upload your photo to start</p>
+            </div>
+            <div class="try-on-controls">
+              <label>Adjust Size:</label>
+              <input type="range" id="tryOnSizeSlider" min="0.3" max="2.5" step="0.05" value="1" style="width:150px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-panel" id="chatPanel">
       <div class="chat-header">
         <h3>Stylist Chat</h3>
         <button

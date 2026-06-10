@@ -10,7 +10,7 @@ import json
 
 from .config import settings
 from .models import ChatRequest, FeedbackRequest, RecommendRequest
-from .vision import analyze_body_photo
+from .vision import analyze_body_photo, analyze_clothing_placement
 from .mongodb_client import mongodb_client
 from .ranker import rank_items
 from .agent import agent_client
@@ -62,6 +62,18 @@ async def scan_body(user_id: str = Form(...), file: UploadFile = File(...)):
         await mongodb_client.upsert_user_body_data(user_id, analysis)
     except Exception as e:
         logger.warning(f"Could not save to DB: {e}")
+    return analysis
+
+@app.post("/api/analyze-placement")
+async def analyze_placement(file: UploadFile = File(...)):
+    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG, PNG, and WebP are allowed.")
+    
+    contents = await file.read()
+    if len(contents) > settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"File too large. Max size is {settings.MAX_UPLOAD_SIZE_MB}MB.")
+
+    analysis = await analyze_clothing_placement(contents)
     return analysis
 
 @app.post("/api/recommend")
