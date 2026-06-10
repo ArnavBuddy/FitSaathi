@@ -12,3 +12,10 @@ python-jose[cryptography]==3.3.0
 httpx==0.27.0
 numpy==1.26.4
 python-dotenv==1.0.1
+
+# Virtual Try-On Dependencies (for CatVTON)
+# torch>=2.0.0
+# torchvision>=0.15.0
+# transformers>=4.30.0
+# diffusers>=0.20.0
+# accelerate>=0.20.0
