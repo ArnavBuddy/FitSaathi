@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     SECRET_KEY: Optional[str] = "dev-secret-key"
     ENVIRONMENT: str = "development"
     MAX_UPLOAD_SIZE_MB: int = 10
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8080,https://fitsaathi.vercel.app,https://fitsaathi-backend.onrender.com"
     
     # Virtual Try-On specific settings
     CATVTON_MODEL_PATH: Optional[str] = None

@@ -28,6 +28,12 @@
         font-family: "Playfair Display", serif;
       }
     </style>
+    <!-- Environment Variables (will be injected by Vercel or use defaults locally -->
+    <script>
+      // Default environment variables for local development
+      window.ENV = window.ENV || {};
+      // Vercel will replace this with injected env vars on deployment
+    </script>
   </head>
   <body>
     <div class="container">

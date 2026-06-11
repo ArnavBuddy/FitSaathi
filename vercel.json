@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "mkdir -p build && cp -r frontend/* build/",
+  "outputDirectory": "build",
+  "env": {
+    "VITE_API_BASE_URL": "https://fitsaathi-backend.onrender.com"
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/" }
+  ]
+}
