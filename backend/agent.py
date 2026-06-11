@@ -22,7 +22,7 @@ class AgentClient:
             return "I'm sorry, my AI brain isn't connected yet (missing GOOGLE_API_KEY). Please set up your .env file."
 
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Load system prompt
         try:

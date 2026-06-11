@@ -12,25 +12,37 @@ import asyncio
 from PIL import Image
 import io
 
-from .config import settings
-from .models import ChatRequest, FeedbackRequest, RecommendRequest
-from .schemas import (
-    TryOnGenerateRequest,
-    TryOnGenerateResponse,
-    TryOnResultResponse,
-    TryOnJobStatus
-)
-from .vision import analyze_body_photo, analyze_clothing_placement
-from .mongodb_client import mongodb_client
-from .ranker import rank_items
-from .agent import agent_client
-from .embeddings import generate_style_embedding
-from .services.virtual_tryon import (
-    init_tryon_service,
-    tryon_provider,
-    job_store,
-    download_garment_image
-)
+# Handle both direct script execution and module import
+try:
+    from .config import settings
+    from .models import ChatRequest, FeedbackRequest, RecommendRequest
+    from .schemas import (
+        TryOnGenerateRequest,
+        TryOnGenerateResponse,
+        TryOnResultResponse,
+        TryOnJobStatus
+    )
+    from .vision import analyze_body_photo, analyze_clothing_placement
+    from .mongodb_client import mongodb_client
+    from .ranker import rank_items
+    from .agent import agent_client
+    from .embeddings import generate_style_embedding
+    from .services import virtual_tryon
+except ImportError:
+    from config import settings
+    from models import ChatRequest, FeedbackRequest, RecommendRequest
+    from schemas import (
+        TryOnGenerateRequest,
+        TryOnGenerateResponse,
+        TryOnResultResponse,
+        TryOnJobStatus
+    )
+    from vision import analyze_body_photo, analyze_clothing_placement
+    from mongodb_client import mongodb_client
+    from ranker import rank_items
+    from agent import agent_client
+    from embeddings import generate_style_embedding
+    from services import virtual_tryon
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -65,7 +77,7 @@ async def startup_event():
     logger.info("Starting FitSaathi API...")
     settings.ensure_directories()
     try:
-        init_tryon_service()
+        virtual_tryon.init_tryon_service()
     except Exception as e:
         logger.error(f"Failed to initialize try-on service: {e}")
     logger.info("FitSaathi API started successfully!")
@@ -302,13 +314,13 @@ async def process_tryon_job(
         if not garment_image_url:
             raise ValueError("Item has no image URL")
             
-        garment_image_path = await download_garment_image(garment_image_url)
+        garment_image_path = await virtual_tryon.download_garment_image(garment_image_url)
         
         # Generate try-on
-        if not tryon_provider:
+        if not virtual_tryon.tryon_provider:
             raise RuntimeError("Try-on provider not initialized")
             
-        result_image_path = tryon_provider.generate_tryon(
+        result_image_path = await virtual_tryon.tryon_provider.generate_tryon(
             person_image_path=person_image_path,
             garment_image_path=garment_image_path
         )
@@ -317,7 +329,7 @@ async def process_tryon_job(
         processing_time = time.time() - start_time
         
         # Update job status
-        job_store.update_job(
+        virtual_tryon.job_store.update_job(
             job_id,
             status=TryOnJobStatus.COMPLETED,
             generated_image=f"/uploads/tryons/{os.path.basename(result_image_path)}",
@@ -329,7 +341,7 @@ async def process_tryon_job(
     except Exception as e:
         processing_time = time.time() - start_time
         logger.error(f"Try-on job {job_id} failed: {str(e)}", exc_info=True)
-        job_store.update_job(
+        virtual_tryon.job_store.update_job(
             job_id,
             status=TryOnJobStatus.FAILED,
             error_message=str(e),
@@ -379,7 +391,7 @@ async def generate_tryon(
         )
     
     # Create job
-    job_id = job_store.create_job(user_id, item_id)
+    job_id = virtual_tryon.job_store.create_job(user_id, item_id)
     
     # Add background task
     async def run_task():
@@ -395,7 +407,7 @@ async def generate_tryon(
 @app.get("/api/v1/tryon/result/{job_id}", response_model=TryOnResultResponse)
 async def get_tryon_result(job_id: str):
     """Get the status/result of a try-on job."""
-    job = job_store.get_job(job_id)
+    job = virtual_tryon.job_store.get_job(job_id)
     
     if not job:
         raise HTTPException(

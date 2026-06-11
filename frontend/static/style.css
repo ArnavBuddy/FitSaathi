@@ -8,6 +8,15 @@
   --text-dark: #2d2d2d;
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -31,6 +40,95 @@ h3 {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* General Responsive Styles */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+
+  header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  nav ul {
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .scan-section {
+    padding: 40px 0;
+  }
+
+  .upload-zone {
+    padding: 30px 20px;
+  }
+
+  .recommendations-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .card img {
+    height: 350px;
+  }
+
+  .card-content {
+    padding: 15px;
+  }
+
+  .card-actions {
+    flex-wrap: wrap;
+  }
+
+  .filter-bar.active {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo h1 {
+    font-size: 20px;
+  }
+
+  .tagline {
+    font-size: 12px;
+  }
+
+  nav ul {
+    gap: 10px;
+  }
+
+  nav a {
+    font-size: 13px;
+  }
+
+  .recommendations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card img {
+    height: 400px;
+  }
+
+  .chat-trigger {
+    width: 50px;
+    height: 50px;
+    bottom: 20px;
+    right: 20px;
+  }
 }
 
 /* Header */
@@ -352,20 +450,23 @@ input[type="range"] {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.85);
-  display: none; /* Will be changed to flex with JS */
   justify-content: center;
   align-items: center;
   backdrop-filter: blur(5px);
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .modal-content {
   background: linear-gradient(145deg, #0f1b2d, #0d1624);
   margin: 0;
-  padding: 30px;
+  padding: 24px;
   border: 1px solid rgba(212, 168, 67, 0.3);
   border-radius: 24px;
-  width: 90%;
-  max-width: 550px;
+  width: 95%;
+  max-width: 700px;
+  max-height: 95vh;
+  overflow-y: auto;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.5),
     0 0 40px rgba(212, 168, 67, 0.1);
@@ -401,14 +502,19 @@ input[type="range"] {
   color: var(--coral);
 }
 
+.modal-body {
+  padding-top: 10px;
+}
+
 /* Try On Container */
 .try-on-container {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
   margin: 0 auto;
   border: 3px dashed rgba(212, 168, 67, 0.4);
-  min-height: 520px;
+  min-height: 600px;
+  max-height: 75vh;
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.3) 0%,
@@ -426,77 +532,85 @@ input[type="range"] {
 #tryOnUserPhoto {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
 .try-on-product-wrapper {
-    position: absolute;
-    top: 15%;
-    left: 50%;
-    width: 60%;
-    transform: translate(-50%, 0) scale(1);
-    z-index: 10;
-    cursor: grab;
-    user-select: none;
-    -webkit-user-select: none;
-    transition: transform 0.1s ease-out; /* Smooth dragging */
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  width: 50%;
+  transform: translate(-50%, 0) scale(1);
+  z-index: 10;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.1s ease-out; /* Smooth dragging */
 }
 
 #tryOnProductPhoto {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    opacity: 1; /* No transparency */
-    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
-    pointer-events: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 1; /* No transparency */
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
 }
 
 .try-on-product-wrapper:active {
-    cursor: grabbing;
+  cursor: grabbing;
 }
 
 .resize-handle {
-    position: absolute;
-    bottom: -15px;
-    right: -15px;
-    width: 30px;
-    height: 30px;
-    background: var(--gold);
-    border-radius: 50%;
-    cursor: nwse-resize;
-    border: 3px solid var(--navy);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 20;
+  position: absolute;
+  bottom: -15px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  background: var(--gold);
+  border-radius: 50%;
+  cursor: nwse-resize;
+  border: 3px solid var(--navy);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
 }
 
 .resize-handle:hover {
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(212, 168, 67, 0.6);
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(212, 168, 67, 0.6);
 }
 
 .resize-handle::after {
-    content: "↔";
-    color: var(--navy);
-    font-weight: bold;
-    font-size: 14px;
-    transform: rotate(45deg);
+  content: "↔";
+  color: var(--navy);
+  font-weight: bold;
+  font-size: 14px;
+  transform: rotate(45deg);
 }
 
 #tryOnPlaceholder {
   text-align: center;
-  padding: 180px 20px;
+  padding: 240px 20px;
   color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
 }
 
 /* Size slider styling */
 .try-on-controls {
-  margin-top: 24px;
+  margin-top: 20px;
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
 }
 
 .try-on-controls label {
@@ -506,6 +620,20 @@ input[type="range"] {
   text-transform: uppercase;
   font-size: 12px;
   letter-spacing: 1px;
+}
+
+/* Ensure buttons in modal are properly visible */
+.try-on-controls .btn {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.try-on-controls .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Make Try It button more prominent */
@@ -551,8 +679,108 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-@media (max-width: 768px) {
+/* Responsive Design - Mobile Devices (up to 480px) */
+@media (max-width: 480px) {
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-content {
+    padding: 16px;
+    width: 100%;
+    border-radius: 16px;
+  }
+
+  .modal-header h3 {
+    font-size: 20px;
+  }
+
+  .try-on-container {
+    max-width: 100%;
+    min-height: 400px;
+    max-height: 65vh;
+  }
+
+  #tryOnPlaceholder {
+    padding: 150px 20px;
+    font-size: 16px;
+  }
+
+  .try-on-product-wrapper {
+    width: 65%;
+  }
+
+  .try-on-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .try-on-controls .btn {
+    width: 100%;
+    min-width: auto;
+  }
+
+  #tryOnManualControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .chat-panel {
     width: 100%;
+  }
+}
+
+/* Responsive Design - Tablets/iPads (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .modal {
+    padding: 15px;
+  }
+
+  .modal-content {
+    padding: 20px;
+    width: 90%;
+    max-width: 600px;
+  }
+
+  .try-on-container {
+    max-width: 100%;
+    min-height: 500px;
+    max-height: 70vh;
+  }
+
+  #tryOnPlaceholder {
+    padding: 200px 20px;
+  }
+
+  .try-on-product-wrapper {
+    width: 55%;
+  }
+
+  .chat-panel {
+    width: 100%;
+  }
+}
+
+/* Responsive Design - Small Laptops (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-content {
+    max-width: 650px;
+  }
+
+  .try-on-container {
+    max-width: 550px;
+    min-height: 550px;
+  }
+}
+
+/* Responsive Design - Large Laptops/Desktops (1025px and above) */
+@media (min-width: 1025px) {
+  .modal-content {
+    max-width: 700px;
+  }
+
+  .try-on-container {
+    max-width: 600px;
+    min-height: 600px;
   }
 }

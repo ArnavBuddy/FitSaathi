@@ -11,6 +11,7 @@
   let currentScanResult = null;
   let sessionId = Math.random().toString(36).substr(2, 9);
   let currentTryOnItem = null;
+  let currentTryOnJobId = null;
   let isDragging = false;
   let isResizing = false;
   let startX = 0;
@@ -20,6 +21,7 @@
   let currentScale = 1;
   let startScale = 1;
   let itemsData = [];
+  let isUsingNewTryOn = false;
 
   document.addEventListener("DOMContentLoaded", () => {
     console.log("FitSaathi: DOM Loaded");
@@ -54,6 +56,12 @@
       tryOnPlaceholder: document.getElementById("tryOnPlaceholder"),
       tryOnSizeSlider: document.getElementById("tryOnSizeSlider"),
       tryOnContainer: document.getElementById("tryOnContainer"),
+      tryOnResultPhoto: document.getElementById("tryOnResultPhoto"),
+      tryOnLoading: document.getElementById("tryOnLoading"),
+      tryOnGenerateBtn: document.getElementById("tryOnGenerateBtn"),
+      tryOnDownloadBtn: document.getElementById("tryOnDownloadBtn"),
+      tryOnManualControls: document.getElementById("tryOnManualControls"),
+      tryOnControls: document.getElementById("tryOnControls"),
     };
 
     // Basic check for essential elements
@@ -285,11 +293,22 @@
     // Virtual Try-On Functions
     function openTryOnModal(item) {
       currentTryOnItem = item;
+      currentTryOnJobId = null;
+      isUsingNewTryOn = false;
+      
       elements.tryOnItemName.textContent = item.name;
       elements.tryOnProductPhoto.src = item.image_url;
+      
+      // Reset all displays
       elements.tryOnProductWrapper.style.display = "block";
       elements.tryOnUserPhoto.style.display = "none";
       elements.tryOnPlaceholder.style.display = "block";
+      elements.tryOnResultPhoto.style.display = "none";
+      elements.tryOnLoading.style.display = "none";
+      elements.tryOnGenerateBtn.style.display = "none";
+      elements.tryOnDownloadBtn.style.display = "none";
+      elements.tryOnManualControls.style.display = "flex";
+      
       elements.tryOnPhotoInput.value = "";
       elements.tryOnSizeSlider.value = 1;
       currentScale = 1;
@@ -311,6 +330,7 @@
     function closeTryOnModal() {
       elements.tryOnModal.style.display = "none";
       currentTryOnItem = null;
+      currentTryOnJobId = null;
     }
 
     async function handleTryOnPhotoUpload(e) {
@@ -322,13 +342,113 @@
         elements.tryOnUserPhoto.src = e.target.result;
         elements.tryOnUserPhoto.style.display = "block";
         elements.tryOnPlaceholder.style.display = "none";
-
-        // Analyze the photo for automatic placement
-        await analyzeAndPlaceClothing(file);
+        elements.tryOnGenerateBtn.style.display = "block";
+        elements.tryOnGenerateBtn.disabled = false;
       };
       reader.readAsDataURL(file);
     }
-
+    
+    async function handleGenerateTryOn() {
+      if (!currentTryOnItem || !elements.tryOnPhotoInput.files[0]) {
+        alert("Please select an item and upload your photo!");
+        return;
+      }
+      
+      isUsingNewTryOn = true;
+      elements.tryOnLoading.style.display = "flex";
+      elements.tryOnGenerateBtn.disabled = true;
+      elements.tryOnProductWrapper.style.display = "none";
+      elements.tryOnManualControls.style.display = "none";
+      
+      try {
+        const formData = new FormData();
+        formData.append("user_id", userId);
+        formData.append("item_id", currentTryOnItem.item_id);
+        formData.append("file", elements.tryOnPhotoInput.files[0]);
+        
+        console.log("Sending request to /api/v1/tryon/generate...");
+        
+        const response = await fetch("/api/v1/tryon/generate", {
+          method: "POST",
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error("Failed to start try-on generation");
+        }
+        
+        const result = await response.json();
+        currentTryOnJobId = result.job_id;
+        
+        console.log("Job started, polling for result:", currentTryOnJobId);
+        
+        // Poll for results
+        pollTryOnResult(currentTryOnJobId);
+        
+      } catch (err) {
+        console.error("Error generating try-on:", err);
+        alert("Error generating try-on, falling back to manual mode!");
+        elements.tryOnLoading.style.display = "none";
+        elements.tryOnGenerateBtn.style.display = "block";
+        elements.tryOnGenerateBtn.disabled = false;
+        elements.tryOnProductWrapper.style.display = "block";
+        elements.tryOnManualControls.style.display = "flex";
+        
+        // Fall back to original analyze and place
+        await analyzeAndPlaceClothing(elements.tryOnPhotoInput.files[0]);
+      }
+    }
+    
+    async function pollTryOnResult(jobId) {
+      const maxAttempts = 60;
+      let attempts = 0;
+      
+      const poll = async () => {
+        try {
+          const response = await fetch(`/api/v1/tryon/result/${jobId}`);
+          
+          if (!response.ok) {
+            throw new Error("Failed to check job status");
+          }
+          
+          const job = await response.json();
+          
+          console.log("Job status:", job);
+          
+          if (job.status === "completed" && job.generated_image) {
+            // Success! Display result
+            elements.tryOnLoading.style.display = "none";
+            elements.tryOnResultPhoto.src = job.generated_image;
+            elements.tryOnResultPhoto.style.display = "block";
+            elements.tryOnDownloadBtn.style.display = "block";
+            console.log("Try-on completed successfully!");
+            
+          } else if (job.status === "failed") {
+            throw new Error(job.error_message || "Try-on failed");
+            
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(poll, 2000);
+            
+          } else {
+            throw new Error("Try-on timed out");
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+          alert("Error with try-on, falling back to manual mode!");
+          elements.tryOnLoading.style.display = "none";
+          elements.tryOnGenerateBtn.style.display = "block";
+          elements.tryOnGenerateBtn.disabled = false;
+          elements.tryOnProductWrapper.style.display = "block";
+          elements.tryOnManualControls.style.display = "flex";
+          
+          await analyzeAndPlaceClothing(elements.tryOnPhotoInput.files[0]);
+        }
+      };
+      
+      poll();
+    }
+    
     async function analyzeAndPlaceClothing(file) {
       try {
         console.log("Analyzing photo for clothing placement...");
@@ -438,6 +558,15 @@
     function endResize() {
       isResizing = false;
     }
+    
+    function handleDownloadResult() {
+      if (elements.tryOnResultPhoto.src) {
+        const link = document.createElement("a");
+        link.href = elements.tryOnResultPhoto.src;
+        link.download = `fitsaathi-tryon-${currentTryOnItem.item_id}.jpg`;
+        link.click();
+      }
+    }
 
     // Bind Try-On Events
     if (elements.closeTryOn) {
@@ -458,6 +587,12 @@
     }
     if (elements.tryOnSizeSlider) {
       elements.tryOnSizeSlider.addEventListener("input", handleTryOnSizeChange);
+    }
+    if (elements.tryOnGenerateBtn) {
+      elements.tryOnGenerateBtn.addEventListener("click", handleGenerateTryOn);
+    }
+    if (elements.tryOnDownloadBtn) {
+      elements.tryOnDownloadBtn.addEventListener("click", handleDownloadResult);
     }
 
     // Bind drag events to wrapper

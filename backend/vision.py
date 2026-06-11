@@ -10,7 +10,7 @@ async def analyze_body_photo(image_bytes: bytes) -> dict:
         return {"error": "config_missing", "message": "GOOGLE_API_KEY is not set. Please add it to your .env file."}
     
     genai.configure(api_key=settings.GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
 
     system_instruction = """
     You are a professional body measurement analyst. You analyze 
@@ -78,7 +78,7 @@ async def analyze_clothing_placement(image_bytes: bytes) -> dict:
         return {"error": "config_missing", "message": "GOOGLE_API_KEY is not set. Please add it to your .env file."}
     
     genai.configure(api_key=settings.GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash')
 
     system_instruction = """
     You are an expert in virtual clothing try-on. You analyze user photos to determine 
