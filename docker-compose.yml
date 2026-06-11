@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build: .
@@ -11,6 +9,7 @@ services:
       - ./backend:/app/backend
       - ./frontend:/app/frontend
       - ./agent_config:/app/agent_config
+      - ./uploads:/app/uploads
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8080 --reload
 
   mongodb:

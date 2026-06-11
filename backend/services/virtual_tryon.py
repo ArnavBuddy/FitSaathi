@@ -59,7 +59,7 @@ class VirtualTryOnProvider(ABC):
     ) -> Image.Image:
         """
         Create a simple placeholder composite image (for development without real model).
-        Pastes the clothing item on top of the user's photo.
+        Pastes the clothing item on top of the user's photo with transparency for black background.
 
         Args:
             person_img: User's photo
@@ -73,14 +73,32 @@ class VirtualTryOnProvider(ABC):
         aspect_ratio = garment_img.height / garment_img.width
         target_height = int(target_width * aspect_ratio)
         garment_resized = garment_img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+        
+        # Convert garment to RGBA
+        garment_rgba = garment_resized.convert("RGBA")
+        
+        # Make black pixels transparent
+        data = garment_rgba.getdata()
+        new_data = []
+        for item in data:
+            # If pixel is black or very dark, make transparent
+            if item[0] < 30 and item[1] < 30 and item[2] < 30:
+                new_data.append((255, 255, 255, 0))
+            else:
+                new_data.append(item)
+        
+        garment_rgba.putdata(new_data)
 
-        # Create a copy of person image
-        result = person_img.copy()
+        # Create a copy of person image (convert to RGBA for compositing)
+        result_rgba = person_img.convert("RGBA").copy()
 
         # Paste garment in center (adjust coordinates as needed)
-        x = (result.width - target_width) // 2
-        y = result.height // 4
-        result.paste(garment_resized, (x, y))
+        x = (result_rgba.width - target_width) // 2
+        y = result_rgba.height // 4
+        result_rgba.paste(garment_rgba, (x, y), mask=garment_rgba)
+        
+        # Convert back to RGB
+        result = result_rgba.convert("RGB")
 
         return result
 

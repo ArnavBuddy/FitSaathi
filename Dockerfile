@@ -13,6 +13,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
 COPY agent_config/ ./agent_config/
+COPY data/ ./data/
+
+# Create upload directories
+RUN mkdir -p uploads/tryons uploads/users uploads/garments
 
 EXPOSE 8080
 
