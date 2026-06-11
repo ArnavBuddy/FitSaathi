@@ -82,6 +82,9 @@ async def startup_event():
         logger.error(f"Failed to initialize try-on service: {e}")
     logger.info("FitSaathi API started successfully!")
 
+# Ensure directories are created before mounting static files
+settings.ensure_directories()
+
 # =============================================================================
 # EXISTING ROUTES
 # =============================================================================

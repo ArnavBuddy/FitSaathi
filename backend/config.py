@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     
     def ensure_directories(self):
         """Ensure all necessary upload directories exist."""
+        os.makedirs("uploads", exist_ok=True)
         os.makedirs(self.TRYON_OUTPUT_DIR, exist_ok=True)
         os.makedirs(self.UPLOADS_USERS_DIR, exist_ok=True)
         os.makedirs(self.UPLOADS_GARMENTS_DIR, exist_ok=True)
